@@ -568,38 +568,31 @@ public actor IMAPServer {
         return try await executeCommand(command).first
     }
     
-    /// Stream message headers for a set of identifiers
-    /// - Parameter identifierSet: The set of message identifiers to fetch
-    /// - Returns: An AsyncThrowingStream yielding MessageInfo one at a time
-    public nonisolated func fetchMessageInfos<T: MessageIdentifier>(using identifierSet: MessageIdentifierSet<T>) -> AsyncThrowingStream<MessageInfo, Error> {
-        AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    guard !identifierSet.isEmpty else {
-                        throw IMAPError.emptyIdentifierSet
-                    }
-                    
-                    for identifier in identifierSet.toArray() {
-                        try Task.checkCancellation()
-                        let singleSet = MessageIdentifierSet<T>(identifier)
-                        let command = FetchMessageInfoCommand(identifierSet: singleSet)
-                        let result = try await executeCommand(command)
-                        for header in result {
-                            continuation.yield(header)
-                        }
-                    }
-                    
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-            
-            continuation.onTermination = { @Sendable _ in
-                task.cancel()
-            }
-        }
-    }
+    /// Stream message headers for a set of identifiers (single batch FETCH per set).
+   /// - Parameter identifierSet: The set of message identifiers to fetch
+   /// - Returns: An AsyncThrowingStream yielding MessageInfo one at a time
+   public nonisolated func fetchMessageInfos<T: MessageIdentifier>(using identifierSet: MessageIdentifierSet<T>) -> AsyncThrowingStream<MessageInfo, Error> {
+       AsyncThrowingStream { continuation in
+           let task = Task {
+               do {
+                   guard !identifierSet.isEmpty else {
+                       throw IMAPError.emptyIdentifierSet
+                   }
+                   let command = FetchMessageInfoCommand(identifierSet: identifierSet)
+                   let result = try await executeCommand(command)
+                   for header in result {
+                       continuation.yield(header)
+                   }
+                   continuation.finish()
+               } catch {
+                   continuation.finish(throwing: error)
+               }
+           }
+           continuation.onTermination = { @Sendable _ in
+               task.cancel()
+           }
+       }
+   }
 
     /// Fetch complete messages with all parts using a message identifier set as a stream
     ///
