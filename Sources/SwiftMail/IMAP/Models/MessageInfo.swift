@@ -7,16 +7,16 @@ import Foundation
 public struct MessageInfo: Codable, Sendable {
     /// The sequence number of the message
     public var sequenceNumber: SequenceNumber
-    
+
     /// The UID of the message (if available)
     public var uid: SwiftMail.UID?
-    
+
     /// The subject of the message
     public var subject: String?
-    
+
     /// The sender of the message
     public var from: String?
-    
+
     /// The recipients of the message
     public var to: [String] = []
 
@@ -25,21 +25,27 @@ public struct MessageInfo: Codable, Sendable {
 
     /// The BCC recipients of the message
     public var bcc: [String] = []
-    
+
     /// The date of the message
     public var date: Date?
-    
+
     /// The message ID
     public var messageId: String?
-    
+
     /// The flags of the message
     public var flags: [Flag]
-    
+
     /// The message parts
     public var parts: [MessagePart]
-    
+
     /// Additional header fields
     public var additionalFields: [String: String]?
+
+    /// List-Unsubscribe header (RFC 8058), for subscription detection
+    public var listUnsubscribe: String?
+
+    /// List-ID header (RFC 2919)
+    public var listId: String?
 
     private enum CodingKeys: String, CodingKey {
         case sequenceNumber
@@ -54,8 +60,10 @@ public struct MessageInfo: Codable, Sendable {
         case flags
         case parts
         case additionalFields
+        case listUnsubscribe
+        case listId
     }
-    
+
     /// Initialize a new email header
     /// - Parameters:
     ///   - sequenceNumber: The sequence number of the message
@@ -69,6 +77,8 @@ public struct MessageInfo: Codable, Sendable {
     ///   - flags: The flags of the message
     ///   - parts: The message parts
     ///   - additionalFields: Additional header fields
+    ///   - listUnsubscribe: List-Unsubscribe header (RFC 8058)
+    ///   - listId: List-ID header (RFC 2919)
     public init(
         sequenceNumber: SequenceNumber,
         uid: SwiftMail.UID? = nil,
@@ -81,7 +91,9 @@ public struct MessageInfo: Codable, Sendable {
         messageId: String? = nil,
         flags: [Flag] = [],
         parts: [MessagePart] = [],
-        additionalFields: [String: String]? = nil
+        additionalFields: [String: String]? = nil,
+        listUnsubscribe: String? = nil,
+        listId: String? = nil
     ) {
         self.sequenceNumber = sequenceNumber
         self.uid = uid
@@ -95,6 +107,8 @@ public struct MessageInfo: Codable, Sendable {
         self.flags = flags
         self.parts = parts
         self.additionalFields = additionalFields
+        self.listUnsubscribe = listUnsubscribe
+        self.listId = listId
     }
 }
 
@@ -114,6 +128,8 @@ public extension MessageInfo {
         let flags = try container.decodeIfPresent([Flag].self, forKey: .flags) ?? []
         let parts = try container.decodeIfPresent([MessagePart].self, forKey: .parts) ?? []
         let additionalFields = try container.decodeIfPresent([String: String].self, forKey: .additionalFields)
+        let listUnsubscribe = try container.decodeIfPresent(String.self, forKey: .listUnsubscribe)
+        let listId = try container.decodeIfPresent(String.self, forKey: .listId)
 
         self.init(
             sequenceNumber: sequenceNumber,
@@ -127,7 +143,9 @@ public extension MessageInfo {
             messageId: messageId,
             flags: flags,
             parts: parts,
-            additionalFields: additionalFields
+            additionalFields: additionalFields,
+            listUnsubscribe: listUnsubscribe,
+            listId: listId
         )
     }
 }
